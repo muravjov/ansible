@@ -5,13 +5,17 @@ import yaml
 
 block_stack = []
 
+def calc_current_pair():
+    current_object = block_stack[-1]
+    is_seq = type(current_object) == list
+    return current_object, is_seq
+    
+
 def append_impl(new_co, current_name, populate):
     if not block_stack:
         block_stack.append({} if current_name else [])
         
-    
-    current_object = block_stack[-1]
-    is_seq = type(current_object) == list
+    current_object, is_seq = calc_current_pair()
     
     if is_seq:
         if populate:
@@ -49,6 +53,41 @@ class Block:
     def __call__(self, name):
         self.current_name = name
         return self
+    
+class When:
+    def __init__(self, condition):
+        self.condition = condition
+    
+    def __enter__(self):
+        current_object, is_seq = calc_current_pair()
+        
+        # :REFACTOR:
+        new_co = [] if is_seq else {}
+        block_stack.append(new_co)
+
+        return None
+    
+    def __exit__(self, type, value, traceback):
+        # :REFACTOR:
+        if type:
+            raise
+
+        condition_block, is_seq = calc_current_pair()
+        block_stack.pop()
+        
+        for item in condition_block:
+            if is_seq:
+                name = None
+            else:
+                name = item
+                item = condition_block[item]
+
+            assert not("when" in item)
+            item["when"] = self.condition
+            append_impl(item, name, False)
+
+        return True
+
 
 mapping  = Block(False)
 sequence = Block(True)
@@ -79,7 +118,8 @@ book_globals = {
     "sequence": sequence,
     "append":   append,
     "append_yaml":   append_yaml,
-    "populate_yaml": populate_yaml
+    "populate_yaml": populate_yaml,
+    "when": When,
 }
 
 #__all__ = book_globals.keys()
