@@ -34,6 +34,9 @@ def push_basedir(basedir):
     if basedir not in _basedirs:
         _basedirs.insert(0, basedir)
 
+        # Pybook possibilities
+        sys.path.insert(0, basedir)
+
 class PluginLoader(object):
 
     '''
