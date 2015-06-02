@@ -82,8 +82,11 @@ class When:
                 name = item
                 item = condition_block[item]
 
-            assert not("when" in item)
-            item["when"] = self.condition
+            if "when" in item:
+                condition, nested_when = self.condition, item["when"]
+                item["when"] = "(%(condition)s) and (%(nested_when)s)" % locals()
+            else:
+                item["when"] = self.condition
             append_impl(item, name, False)
 
         return True
