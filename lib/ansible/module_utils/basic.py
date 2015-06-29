@@ -38,6 +38,8 @@ BOOLEANS_TRUE = ['yes', 'on', '1', 'true', 1]
 BOOLEANS_FALSE = ['no', 'off', '0', 'false', 0]
 BOOLEANS = BOOLEANS_TRUE + BOOLEANS_FALSE
 
+VERBOSE_OUTPUT = False
+
 # ansible modules can be written in any language.  To simplify
 # development of Python modules, the functions available here
 # can be inserted in any module source automatically by including
@@ -1511,6 +1513,10 @@ class AnsibleModule(object):
                 self.fail_json(rc=e.errno, msg="Could not open %s, %s" % (cwd, str(e)))
 
         try:
+            if VERBOSE_OUTPUT:
+                print
+                print clean_args #' '.join([pipes.quote(arg) for arg in args])
+                
             cmd = subprocess.Popen(args, **kwargs)
 
             # the communication logic here is essentially taken from that
@@ -1526,15 +1532,22 @@ class AnsibleModule(object):
                 cmd.stdin.write(data)
                 cmd.stdin.close()
 
+            def read_output(fd):
+                dat = os.read(fd, 9000)
+                if VERBOSE_OUTPUT:
+                    print dat,
+                    
+                return dat
+
             while True:
                 rfd, wfd, efd = select.select(rpipes, [], rpipes, 1)
                 if cmd.stdout in rfd:
-                    dat = os.read(cmd.stdout.fileno(), 9000)
+                    dat = read_output(cmd.stdout.fileno())
                     stdout += dat
                     if dat == '':
                         rpipes.remove(cmd.stdout)
                 if cmd.stderr in rfd:
-                    dat = os.read(cmd.stderr.fileno(), 9000)
+                    dat = read_output(cmd.stderr.fileno())
                     stderr += dat
                     if dat == '':
                         rpipes.remove(cmd.stderr)
