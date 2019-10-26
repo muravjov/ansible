@@ -29,13 +29,27 @@ def append_impl(new_co, current_name, populate):
             current_object[current_name] = new_co
 
 class Block:
-    def __init__(self, is_sequence):
+    def __init__(self, is_sequence, append_name=None):
         self.is_sequence = is_sequence
         self.current_name = None
+        self.append_name = append_name
         
     def __enter__(self):
-        new_co = [] if self.is_sequence else {}
-        append_impl(new_co, self.current_name, False)
+        def make_new(name):
+            new_co = [] if self.is_sequence else {}
+            append_impl(new_co, name, False)
+            return new_co
+        
+        if self.append_name:
+            current_object, is_seq = calc_current_pair()
+            assert not is_seq
+            
+            if self.append_name in current_object:
+                new_co = current_object[self.append_name]
+            else:
+                new_co = make_new(self.append_name)
+        else:
+            new_co = make_new(self.current_name)
         
         block_stack.append(new_co)
         self.current_name = None
@@ -95,6 +109,12 @@ class When:
 mapping  = Block(False)
 sequence = Block(True)
 
+def make_custom_sequence(name):
+    return Block(True, name)
+
+tasks = make_custom_sequence("tasks")
+handlers = make_custom_sequence("handlers")
+
 def append_by_args(args, is_yaml, populate=False):
     ln = len(args)
     if ln == 1:
@@ -123,6 +143,8 @@ book_globals = {
     "append_yaml":   append_yaml,
     "populate_yaml": populate_yaml,
     "when": When,
+    "tasks": tasks,
+    "handlers": handlers,
 }
 
 #__all__ = book_globals.keys()
