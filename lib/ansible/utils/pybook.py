@@ -153,7 +153,7 @@ def run_pybook_file(f):
     # :TRICKY: supposed to be empty
     assert not block_stack
 
-    exec(f, book_globals)
+    exec(f.read(), book_globals)
     return block_stack.pop()
 
 def run_pybook(fname):
@@ -166,7 +166,7 @@ def main():
 
     try:
         result = run_pybook(fname)
-    except Exception, e:
+    except Exception as e:
         raise
     import pprint
     pprint.pprint(result)
