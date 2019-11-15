@@ -55,8 +55,12 @@ def _safe_load(stream, file_name=None, vault_secrets=None):
 
 
 from ansible.utils.display import Display
-import pprint
 display = Display()
+
+import pprint
+from ansible.parsing.vault import VaultLib, is_encrypted
+from ansible.utils import pybook
+import re
 
 def from_yaml(data, file_name='<string>', show_content=True, vault_secrets=None):
     '''
@@ -74,10 +78,19 @@ def from_yaml(data, file_name='<string>', show_content=True, vault_secrets=None)
         new_data = json.loads(data, cls=AnsibleJSONDecoder)
     except Exception:
         # must not be JSON, let the rest try
-        try:
-            new_data = _safe_load(data, file_name=file_name, vault_secrets=vault_secrets)
-        except YAMLError as yaml_exc:
-            _handle_error(yaml_exc, file_name, show_content)
+        
+        plain_data = data
+        if is_encrypted(data):
+            vault = VaultLib(vault_secrets=vault_secrets)
+            plain_data = vault.decrypt(data)
+        
+        if re.match("#!.*python", plain_data):
+            new_data = pybook.run_pybook(file_name)
+        else:
+            try:
+                new_data = _safe_load(data, file_name=file_name, vault_secrets=vault_secrets)
+            except YAMLError as yaml_exc:
+                _handle_error(yaml_exc, file_name, show_content)
 
     if display.verbosity >= 3:
         display.display("""Structure of file "%s":\n%s\n""" % (file_name, pprint.pformat(new_data)), color='yellow')
