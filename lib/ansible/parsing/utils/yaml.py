@@ -55,6 +55,10 @@ def _safe_load(stream, file_name=None, vault_secrets=None):
             pass  # older versions of yaml don't have dispose function, ignore
 
 
+from ansible.utils.display import Display
+import pprint
+display = Display()
+
 def from_yaml(data, file_name='<string>', show_content=True, vault_secrets=None, json_only=False):
     '''
     Creates a python datastructure from the given data, which can be either
@@ -79,5 +83,8 @@ def from_yaml(data, file_name='<string>', show_content=True, vault_secrets=None,
             new_data = _safe_load(data, file_name=file_name, vault_secrets=vault_secrets)
         except YAMLError as yaml_exc:
             _handle_error(json_exc, yaml_exc, file_name, show_content)
+
+    if display.verbosity >= 3:
+        display.display("""Structure of file "%s":\n%s\n""" % (file_name, pprint.pformat(new_data)), color='yellow')
 
     return new_data
