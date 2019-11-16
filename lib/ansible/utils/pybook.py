@@ -123,7 +123,7 @@ def append_by_args(args, is_yaml, populate=False):
         current_name, new_co = args
         
     if is_yaml:
-        new_co = yaml.load(new_co)
+        new_co = yaml.load(new_co, Loader=yaml.FullLoader)
     append_impl(new_co, current_name, populate)
     
 
