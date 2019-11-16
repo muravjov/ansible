@@ -20,6 +20,7 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 import os
+import sys
 
 from ansible import constants as C
 from ansible.errors import AnsibleParserError
@@ -63,6 +64,10 @@ class Playbook:
         self._loader.set_basedir(self._basedir)
 
         add_all_plugin_dirs(self._basedir)
+
+        # Pybook possibilities - next to plugins loading (add_all_plugin_dirs)
+        if self._basedir not in sys.path:
+            sys.path.insert(0, self._basedir)
 
         self._file_name = file_name
 
