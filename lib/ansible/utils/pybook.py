@@ -89,19 +89,30 @@ class When:
         condition_block, is_seq = calc_current_pair()
         block_stack.pop()
         
-        for item in condition_block:
-            if is_seq:
-                name = None
-            else:
-                name = item
-                item = condition_block[item]
-
+        def insert_condition(item):
             if "when" in item:
                 condition, nested_when = self.condition, item["when"]
                 item["when"] = "(%(condition)s) and (%(nested_when)s)" % locals()
             else:
                 item["when"] = self.condition
-            append_impl(item, name, False)
+
+        for item in condition_block:
+            if is_seq:
+                insert_condition(item)
+                append_impl(item, None, False)
+            else:
+                name = item
+                lst = condition_block[item]
+                for item in lst:
+                    insert_condition(item)
+
+                current_object, is_seq = calc_current_pair()
+                assert not is_seq
+
+                if name in current_object:
+                    current_object[name].extend(lst)
+                else:
+                    current_object[name] = lst
 
         return True
 
@@ -115,6 +126,10 @@ def make_custom_sequence(name):
 tasks = make_custom_sequence("tasks")
 handlers = make_custom_sequence("handlers")
 
+yaml_kwargs = {}
+if "FullLoader" in dir(yaml):
+    yaml_kwargs["Loader"] = yaml.FullLoader
+
 def append_by_args(args, is_yaml, populate=False):
     ln = len(args)
     if ln == 1:
@@ -123,7 +138,7 @@ def append_by_args(args, is_yaml, populate=False):
         current_name, new_co = args
         
     if is_yaml:
-        new_co = yaml.load(new_co, Loader=yaml.FullLoader)
+        new_co = yaml.load(new_co, **yaml_kwargs)
     append_impl(new_co, current_name, populate)
     
 
@@ -149,16 +164,16 @@ book_globals = {
 
 #__all__ = book_globals.keys()
 
-def run_pybook_file(f):
+def run_pybook_file(f, fname="<string>"):
     # :TRICKY: supposed to be empty
     assert not block_stack
 
-    exec(f.read(), book_globals)
+    exec(compile(f.read(), fname, "exec"), book_globals)
     return block_stack.pop()
 
 def run_pybook(fname):
     with open(fname) as f:
-        return run_pybook_file(f)
+        return run_pybook_file(f, fname)
 
 def main():
     import sys
